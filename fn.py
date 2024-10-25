@@ -11,14 +11,18 @@ pygame.mixer.init()
 CARPETA_IMAGENES = "C:/musica"
 
 # Configurar la ventana
-alto, ancho = [1024,680]
+alto, ancho = [1224,680]
 VENTANA = pygame.display.set_mode((alto,ancho))
-pygame.display.set_caption("Carrusel Circular de Imágenes")
+pygame.display.set_caption("ROKOPITHON-BG-Gabrielli")
+back = pygame.image.load("8088488.jpg")
+background = pygame.transform.scale(back,(alto -22,ancho))
 
+moneda = pygame.image.load("img1.png")
+moneda_creditos= pygame.transform.scale(moneda,(50,50))
 # Colores
 NEGRO = (0, 0, 0)
 BLANCO = (255, 255, 255)
-AMARILLO = (255, 255, 0)
+AMARILLO = (255, 255, 85)
 VERDE = (0, 255, 0)
 AZUL = (0, 0, 255)
 
@@ -71,12 +75,16 @@ indice_cancion = 0
 ejec = True
 clock = pygame.time.Clock()
 
-# Función para obtener tres imágenes de forma circular
+# Función para obtener cuatro imágenes de forma circular
 def obtener_imagen_circular(indice):
     return [
         imagenes_cargadas[indice % len(imagenes_cargadas)],  # Imagen central
-        imagenes_cargadas[(indice - 1) % len(imagenes_cargadas)],  # Imagen izquierda
-        imagenes_cargadas[(indice + 1) % len(imagenes_cargadas)]   # Imagen derecha
+        imagenes_cargadas[(indice - 1) % len(imagenes_cargadas)],  # Imagen más derecha
+        imagenes_cargadas[(indice - 2) % len(imagenes_cargadas)], 
+        imagenes_cargadas[(indice - 3) % len(imagenes_cargadas)], # Imagen izquierda
+        imagenes_cargadas[(indice + 1) % len(imagenes_cargadas)],  # Imagen derecha
+        imagenes_cargadas[(indice + 2) % len(imagenes_cargadas)],   # Imagen más derecha
+        imagenes_cargadas[(indice + 3) % len(imagenes_cargadas)]   # Imagen más derecha
     ]
 
 # Función para generar un color aleatorio
@@ -93,25 +101,39 @@ cambio_color_contador = 0
 mostrar_carrusel = True
 
 # Créditos iniciales
-creditos = 1  # Puedes ajustar la cantidad inicial de créditos
-credit = f"CREDITO {creditos}"
+creditos = 1
 
 # Lista para las canciones en cola
 cola_canciones = []
-# Fuentes 
-fuente = pygame.font.Font(None, 25)
-    #Creditos Marcacion 
-def actualizar_creditos(cantidad):
-    global creditos  # Asegúrate de que 'creditos' es global si la variable se define fuera de esta función
-    creditos += cantidad  # Actualiza el saldo de créditos
-    print(f"Créditos: {creditos}")  # Imprimir el saldo actualizado
 
-    
+# Fuente para texto cont credito 
+fuente = pygame.font.Font(None, 35)
+
+# Actualizar créditos
+def actualizar_creditos(cantidad):
+    global creditos
+    creditos += cantidad
+    print(f"Créditos: {creditos}")
+#cambiar color moneda insertion 
+
+
+# Definir la fuente
+font = pygame.font.Font(None, 44)
+
+# Función para generar un color RGB aleatorio
+def color_aleatorio():
+    return (random.randint(0, 255), random.randint(0, 255), random.randint(0, 255))
+
+
+
+
 while ejec:
-    # Renderizar y dibujar el texto de créditos
+    # Renderizar texto de créditos
     texto_creditos = fuente.render(f"Créditos: {creditos}", True, BLANCO)
-    VENTANA.blit(texto_creditos, (750, 20))
-    # Mostrar los créditos actuales 
+    # VENTANA.blit(texto_creditos, (750, 20))
+    # VENTANA.blit(moneda_creditos,(750,20))
+    
+    
     for event in pygame.event.get():
         if event.type == pygame.QUIT:
             ejec = False
@@ -128,13 +150,10 @@ while ejec:
             elif event.key == pygame.K_m and not mostrar_carrusel:
                 mostrar_carrusel = True
                 lista_canciones = []
-                indice_cancion = 0
-                
+                indice_cancion = 0                
             elif event.key == pygame.K_c:  # Creditos
-                creditos += 1
                 actualizar_creditos(1)
                 print(f"Créditos: {creditos}")
-
             elif not mostrar_carrusel and lista_canciones:
                 if event.key == pygame.K_DOWN:
                     indice_cancion = (indice_cancion + 1) % len(lista_canciones)
@@ -147,7 +166,7 @@ while ejec:
                         print(f"Agregada a la cola: {lista_canciones[indice_cancion]} - Créditos restantes: {creditos}")
                     else:
                         print("No tienes créditos suficientes para agregar la canción.")
-               
+
     # Reproducir la siguiente canción en la cola si no hay música reproduciéndose
     if not pygame.mixer.music.get_busy() and cola_canciones:
         siguiente_cancion = cola_canciones.pop(0)
@@ -158,59 +177,84 @@ while ejec:
 
     # Dibujar la ventana
     VENTANA.fill(NEGRO)
+    VENTANA.blit(background,(10,-390))
 
     if mostrar_carrusel:
-        # Dibujar la imagen actual
-        imagen_actual = imagenes_cargadas[indice_imagen]
-        VENTANA.blit(imagen_actual, (0, 0))
+          
+        color = color_aleatorio()
+        texto = font.render("SinFonola ", True, color)
+            # Dibujar el texto en la pantalla
+        VENTANA.blit(texto, (550, 10))
+        
+        texto_creditos = fuente.render(f"{creditos}  $ ", True, BLANCO)
+        VENTANA.blit(texto_creditos, (72, 620))
+        VENTANA.blit(moneda_creditos,(10,600))
 
-        # Renderizar y dibujar el texto de créditos
-        texto_creditos = fuente.render(f"Créditos: {creditos}", True, BLANCO)
-        VENTANA.blit(texto_creditos, (750, 20))
+        # Obtener imágenes
+        img_central,m1,m2,m3,p1,p2,p3 = obtener_imagen_circular(indice_imagen)
 
-        # Obtener las imágenes para mostrar (izquierda, centro, derecha)
-        img_central, img_izquierda, img_derecha = obtener_imagen_circular(indice_imagen)
-
-        # Redimensionar las imágenes si es necesario
+        # Redimensionar imágenes
         img_central = pygame.transform.scale(img_central, (340, 340))
-        img_izquierda = pygame.transform.scale(img_izquierda, (240, 240))
-        img_derecha = pygame.transform.scale(img_derecha, (240, 240))
+
+        m1 = pygame.transform.scale(m1, (260, 260))
+        m2 = pygame.transform.scale(m2, (260, 260))
+        m3 = pygame.transform.scale(m3, (260, 260))
+        
+        p1 = pygame.transform.scale(p1, (290, 290))
+        p2 = pygame.transform.scale(p2, (260, 260))
+        p3 = pygame.transform.scale(p3, (260, 260))
+        
+        
+          # Mostrar imágenes
+        VENTANA.blit(m1, (110, 10))
+        VENTANA.blit(m2, (660, 160))
+        VENTANA.blit(m1, (580, 262))
+        VENTANA.blit(p3, (230, 160))
+        VENTANA.blit(p2, (140, 225))
+        VENTANA.blit(p1, (218, 262))
+        VENTANA.blit(img_central, (338, 284))
+        # Mostrar imágenes en forma circular
+
 
         # Dibujar el borde de neón
         cambio_color_contador += 1
         if cambio_color_contador % 30 == 0:
             color_neon = color_random()
-        pygame.draw.rect(VENTANA, color_neon, (338, 190, 341, 341), 10, border_radius=22)
-
-        # Mostrar las imágenes en posiciones más separadas
-        VENTANA.blit(img_central, (338, 190))
-        VENTANA.blit(img_izquierda, (50, 180))
-        VENTANA.blit(img_derecha, (750, 180))
+        pygame.draw.rect(VENTANA, color_neon, (330, 275, 358, 358), 5, border_radius=2)
 
     else:
-        # Mostrar la imagen seleccionada en el centro de la pantalla
-        img_seleccionada = pygame.transform.scale(imagen_seleccionada, (450, 400))
-        VENTANA.blit(img_seleccionada, (350, 100))
+       
+        VENTANA.fill(NEGRO)
+        
+        color = color_aleatorio()
+        texto = font.render("SinFonola ", True, color)
+            # Dibujar el texto en la pantalla
+        VENTANA.blit(texto, (550, 10))
 
         
+        
+        img_seleccionada = pygame.transform.scale(imagen_seleccionada, (380, 300))
+        VENTANA.blit(img_seleccionada, (450, 100))
 
-        # Mostrar la lista de canciones en la parte izquierda
         fuente_canciones = pygame.font.SysFont(None, 20)
-        y_pos = 50
+        y_pos = 98
         for i, cancion in enumerate(lista_canciones):
-            if i == indice_cancion:
-                texto = fuente_canciones.render(f"> {cancion}", True, AMARILLO)
-            else:
-                texto = fuente_canciones.render(cancion, True, BLANCO)
-            VENTANA.blit(texto, (50, y_pos))
+            texto = fuente_canciones.render(f"> {cancion}" if i == indice_cancion else cancion, True, AMARILLO if i == indice_cancion else BLANCO)
+            VENTANA.blit(texto, (123, y_pos))
             y_pos += 25
-            texto_creditos = fuente.render(f"Créditos: {creditos}", True, BLANCO)
-            VENTANA.blit(texto_creditos, (750, 20))
+            texto_creditos = fuente.render(f" {creditos} $ ", True, BLANCO)
+            VENTANA.blit(texto_creditos, (72, 620))
+            VENTANA.blit(moneda_creditos,(10,600))
+            
+            # Renderizar el texto con un color aleatorio
+            color = color_aleatorio()
+            texto = font.render("Insertion Money Or Coint", True, color)
+            # Dibujar el texto en la pantalla
+            VENTANA.blit(texto, (125 , 618))
 
-    # Actualizar la pantalla
+
+
     pygame.display.flip()
-       
     clock.tick(60)
 
-# Finalizar Pygame
 pygame.quit()
