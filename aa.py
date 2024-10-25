@@ -1,14 +1,22 @@
 import pygame
-import os,sys, random,time
+import os
+import sys
+import random
+
+# Inicializar Pygame y su mixer
 pygame.init()
 pygame.mixer.init()
+
 # Ruta de la carpeta donde están las imágenes y sus subcarpetas
 CARPETA_IMAGENES = "C:/musica"
+
+# Configurar la ventana
 alto, ancho = [1224,680]
 VENTANA = pygame.display.set_mode((alto,ancho))
 pygame.display.set_caption("ROKOPITHON-BG-Gabrielli")
 back = pygame.image.load("8088488.jpg")
 background = pygame.transform.scale(back,(alto -22,ancho))
+
 moneda = pygame.image.load("img1.png")
 moneda_creditos= pygame.transform.scale(moneda,(50,50))
 # Colores
@@ -17,10 +25,13 @@ BLANCO = (255, 255, 255)
 AMARILLO = (255, 255, 85)
 VERDE = (0, 255, 0)
 AZUL = (0, 0, 255)
+
 # Extensiones de imagen válidas
 EXTENSIONES_VALIDAS = ('.png', '.jpg', '.jpeg')
+
 # Extensiones válidas de música
 EXTENSIONES_MUSICA = ('.mp3', '.wav', '.ogg')
+
 # Función para obtener todas las imágenes en la carpeta y subcarpetas
 def obtener_imagenes(carpeta):
     imagenes = []
@@ -29,6 +40,7 @@ def obtener_imagenes(carpeta):
             if file.endswith(EXTENSIONES_VALIDAS):
                 imagenes.append(os.path.join(root, file))
     return imagenes
+
 # Función para obtener canciones de la misma carpeta
 def obtener_canciones(carpeta):
     canciones = []
@@ -143,7 +155,8 @@ while ejec:
             elif event.key == pygame.K_LEFT and mostrar_carrusel:
                 indice_imagen = (indice_imagen - 1) % len(imagenes_cargadas)
             elif event.key == pygame.K_RETURN and mostrar_carrusel:
-               
+                mover = True
+                inicio_movimiento = pygame.time.get_ticks()
                 
                 imagen_seleccionada = imagenes_cargadas[indice_imagen]
                 carpeta_seleccionada = os.path.dirname(imagenes[indice_imagen])
@@ -209,9 +222,17 @@ while ejec:
           # Limpiar la pantalla
     # screen.fill((0, 0, 0))
 
-   
+    # Mover la imagen si se presionó Enter y no ha pasado el tiempo de duración
+    if mover:
+        if (pygame.time.get_ticks() - inicio_movimiento) < duracion_movimiento * 1000:
+            mover_imagen(imagen_rect)
+        else:
+            mover = False
+
+    # Dibujar la imagen en la pantalla
+        screen.blit(imagen, imagen_rect)
           # Mostrar imágenes
-        VENTANA.blit(m1, (430, 120))
+        VENTANA.blit(m1, (110, 10))
         VENTANA.blit(m2, (660, 160))
         VENTANA.blit(m1, (580, 262))
         VENTANA.blit(p3, (230, 160))
@@ -228,61 +249,31 @@ while ejec:
         pygame.draw.rect(VENTANA, color_neon, (330, 275, 358, 358), 5, border_radius=2)
 
     else:
-       #ventana de Vista de album 
-        VENTANA.fill(NEGRO)        
+       
+        VENTANA.fill(NEGRO)
+        
         color = color_aleatorio()
         texto = font.render("SinFonola ", True, color)
-       # Dibujar el texto en la pantalla
+            # Dibujar el texto en la pantalla
         VENTANA.blit(texto, (550, 10))
-        
-        img_seleccionada = pygame.transform.scale(imagen_seleccionada, (492, 500))
-        VENTANA.blit(img_seleccionada, (588, 70))
 
-        fuente_canciones = pygame.font.SysFont(None, 25)
+
+
+        fuente_canciones = pygame.font.SysFont(None, 20)
         y_pos = 98
-        
-        
-        
-         #cuadrado adorno 
-        pygame.draw.rect(VENTANA, (95,25,85),(20,75, 450,500))
-     
-
-   
-     #Seccion de lista de canciones 
-    for i, cancion in enumerate(lista_canciones):
-        cancion_sin_extension = cancion.replace(".mp3", "")
-        
-        # Determina si esta es la canción seleccionada
-        color_texto = AMARILLO if i == indice_cancion else BLANCO
-        texto = f"< [ {cancion_sin_extension} ] >" if i == indice_cancion else cancion_sin_extension
-        
-        # Renderiza el texto sin blitearlo todavía
-        superficie_texto = fuente_canciones.render(texto, True, color_texto)
-        
-        # Configuración del color violeta para el fondo
-        # Dibuja un rectángulo un poco más grande que el texto
-        if i == indice_cancion:
-            color_fondo = (148, 0, 211)  # RGB para violeta
-            pygame.draw.rect(
-                VENTANA, 
-                color_fondo, 
-                (100 - 5, y_pos - 3, superficie_texto.get_width() + 10, superficie_texto.get_height() + 6)
-        )
-        
-        # Blitea el texto encima del rectángulo
-        VENTANA.blit(superficie_texto, (100, y_pos))
-        y_pos += 28
-
-        
-        # Código adicional para los créditos
-        texto_creditos = fuente.render(f" {creditos} $ ", True, BLANCO)
-        VENTANA.blit(texto_creditos, (72, 620))
-        VENTANA.blit(moneda_creditos, (10, 600))
-        # Renderizar el texto con un color aleatorio
-        color = color_aleatorio()
-        texto = font.render("Insertion Money Or Coint", True, color)
-        # Dibujar el texto en la pantalla
-        VENTANA.blit(texto, (125 , 618))
+        for i, cancion in enumerate(lista_canciones):
+            texto = fuente_canciones.render(f"> {cancion}" if i == indice_cancion else cancion, True, AMARILLO if i == indice_cancion else BLANCO)
+            VENTANA.blit(texto, (123, y_pos))
+            y_pos += 25
+            texto_creditos = fuente.render(f" {creditos} $ ", True, BLANCO)
+            VENTANA.blit(texto_creditos, (72, 620))
+            VENTANA.blit(moneda_creditos,(10,600))
+            
+            # Renderizar el texto con un color aleatorio
+            color = color_aleatorio()
+            texto = font.render("Insertion Money Or Coint", True, color)
+            # Dibujar el texto en la pantalla
+            VENTANA.blit(texto, (125 , 618))
 
 
 
