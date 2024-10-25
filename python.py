@@ -166,6 +166,7 @@ while ejec:
                         cola_canciones.append(lista_canciones[indice_cancion])
                         creditos -= 1
                         print(f"Agregada a la cola: {lista_canciones[indice_cancion]} - Créditos restantes: {creditos}")
+                        print (len(lista_canciones))
                     else:
                         print("No tienes créditos suficientes para agregar la canción.")
 
@@ -228,23 +229,26 @@ while ejec:
         pygame.draw.rect(VENTANA, color_neon, (330, 275, 358, 358), 5, border_radius=2)
 
     else:
-       #ventana de Vista de album 
+        
         VENTANA.fill(NEGRO)        
+                     #cuadrado adorno 
+        pygame.draw.rect(VENTANA, color_neon,(15,60, 850,525),6,border_bottom_left_radius=53)
+        
+       #ventana de Vista de album 
         color = color_aleatorio()
         texto = font.render("SinFonola ", True, color)
        # Dibujar el texto en la pantalla
         VENTANA.blit(texto, (550, 10))
         
-        img_seleccionada = pygame.transform.scale(imagen_seleccionada, (492, 500))
-        VENTANA.blit(img_seleccionada, (588, 70))
+        img_seleccionada = pygame.transform.scale(imagen_seleccionada, (402, 400))
+        VENTANA.blit(img_seleccionada, (588, 95))
 
         fuente_canciones = pygame.font.SysFont(None, 25)
         y_pos = 98
         
         
         
-         #cuadrado adorno 
-        pygame.draw.rect(VENTANA, (95,25,85),(20,75, 450,500))
+
      
 
    
@@ -266,23 +270,29 @@ while ejec:
             pygame.draw.rect(
                 VENTANA, 
                 color_fondo, 
-                (100 - 5, y_pos - 3, superficie_texto.get_width() + 10, superficie_texto.get_height() + 6)
+                (100 - 5, y_pos - 3, superficie_texto.get_width() + 12, superficie_texto.get_height() + 6)
         )
+        
         
         # Blitea el texto encima del rectángulo
         VENTANA.blit(superficie_texto, (100, y_pos))
-        y_pos += 28
+        y_pos += 20
 
+        
+        
         
         # Código adicional para los créditos
         texto_creditos = fuente.render(f" {creditos} $ ", True, BLANCO)
         VENTANA.blit(texto_creditos, (72, 620))
         VENTANA.blit(moneda_creditos, (10, 600))
+        
         # Renderizar el texto con un color aleatorio
         color = color_aleatorio()
         texto = font.render("Insertion Money Or Coint", True, color)
-        # Dibujar el texto en la pantalla
+        # Dibujar el texto en la pantalla de conin
         VENTANA.blit(texto, (125 , 618))
+        
+    
 
 
 
