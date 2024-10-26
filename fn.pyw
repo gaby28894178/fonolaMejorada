@@ -135,9 +135,8 @@ duracion_movimiento = 5  # Duración en segundos
  
 # Texto a mostrar
 moneda = fuente_canciones.render("Insert Money Or Coin", True, color)
-
-
-
+   # Cuántos frames dura el temblor
+temblor_frame = 0
 while ejec:
     # Renderizar texto de créditos
     texto_creditos = fuente.render(f"Créditos: {creditos}", True, BLANCO)    

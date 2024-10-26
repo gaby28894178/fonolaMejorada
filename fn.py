@@ -153,7 +153,7 @@ while ejec:
                 indice_cancion = 0                
             elif event.key == pygame.K_c:  # Creditos
                 actualizar_creditos(1)
-                print(f"Créditos: {creditos}")
+                # print(f"Créditos: {creditos}")
             elif not mostrar_carrusel and lista_canciones:
                 if event.key == pygame.K_DOWN:
                     indice_cancion = (indice_cancion + 1) % len(lista_canciones)
@@ -163,9 +163,9 @@ while ejec:
                     if creditos > 0:
                         cola_canciones.append(lista_canciones[indice_cancion])
                         creditos -= 1
-                        print(f"Agregada a la cola: {lista_canciones[indice_cancion]} - Créditos restantes: {creditos}")
+                        # print(f"Agregada a la cola: {lista_canciones[indice_cancion]} - Créditos restantes: {creditos}")
                     else:
-                        print("No tienes créditos suficientes para agregar la canción.")
+                     pass
 
     # Reproducir la siguiente canción en la cola si no hay música reproduciéndose
     if not pygame.mixer.music.get_busy() and cola_canciones:
@@ -173,7 +173,7 @@ while ejec:
         ruta_cancion = os.path.join(carpeta_seleccionada, siguiente_cancion)
         pygame.mixer.music.load(ruta_cancion)
         pygame.mixer.music.play()
-        print(f"Reproduciendo: {siguiente_cancion}")
+        # print(f"Reproduciendo: {siguiente_cancion}")
 
     # Dibujar la ventana
     VENTANA.fill(NEGRO)
