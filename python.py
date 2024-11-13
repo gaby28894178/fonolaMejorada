@@ -1,17 +1,56 @@
 import pygame
-import os,sys, random,time
+import os
+import sys
+import random
+import time
+import subprocess  # Para comprobar dispositivos USB en Windows
+
 pygame.init()
 pygame.mixer.init()
+
 # Ruta de la carpeta donde están las imágenes y sus subcarpetas
 CARPETA_IMAGENES = r"C:/musica"
-alto, ancho = [1224,680]
-VENTANA = pygame.display.set_mode((alto,ancho))
+alto, ancho = [1224, 680]
+VENTANA = pygame.display.set_mode((alto, ancho))
 pygame.display.set_caption("ROKOPITHON-BG-Gabrielli")
-back = pygame.image.load("8088488.jpg")
+
+# Función para verificar si el USB específico está conectado
+def usb_conectado(letra_usb):
+    try:
+        # Comando para listar las unidades USB en Windows
+        dispositivos = subprocess.check_output("wmic logicaldisk get caption, description", shell=True, text=True).strip().split('\n')
+        
+        # Comprobar si la letra de la unidad USB está en la lista
+        for dispositivo in dispositivos:
+            if letra_usb in dispositivo:
+                return True
+    except Exception as e:
+        print(f"Error al verificar dispositivos USB: {e}")
+    return False
+
+# Letra de la unidad del USB
+LETRA_USB = "E:"  # Cambia esto a la letra correcta de tu USB
+
+# Verificar si el USB está conectado
+if not usb_conectado(LETRA_USB):
+    print("El USB no está conectado. El programa se cerrará.")
+    pygame.quit()
+    sys.exit()
+
+
+
+
+# ... (continúa con el resto de tu implementación)
+
+
+#! Cargo el fondo de la ventana mc
+back = pygame.image.load("background.jpg")
 background = pygame.transform.scale(back,(alto -22,ancho))
+#! Cargo la imagen de moneda
 moneda = pygame.image.load("img1.png")
 moneda_creditos= pygame.transform.scale(moneda,(50,50))
-# Colores
+
+#? Colores
 NEGRO = (0, 0, 0)
 BLANCO = (255, 255, 255)
 AMARILLO = (255, 255, 85)
@@ -164,6 +203,24 @@ while ejec:
             elif event.key == pygame.K_c:  # Creditos
                 actualizar_creditos(1)
                 print(f"Créditos: {creditos}")
+                
+                #!borrar lista 
+            elif event.key == pygame.K_l:
+                cola_canciones=[]
+                pygame.mixer.music.stop()
+                print("Música detenida.")
+                print(f"lista de canciones {cola_canciones}")
+                os.system('cls')
+                print("Listas Borradas")
+                #!siguiente cancion de lista 
+            elif event.key == pygame.K_s:
+                 #! Detener la canción actual
+                pygame.mixer.music.stop()
+                 #? Reproducir la siguiente canción inmediatamente
+                if cola_canciones:
+                    pygame.mixer.music.stop()
+                    print(f"Reproduciendo : {siguiente_cancion}")
+                
             elif not mostrar_carrusel and lista_canciones:
                 if event.key == pygame.K_DOWN:
                     indice_cancion = (indice_cancion + 1) % len(lista_canciones)
@@ -228,7 +285,6 @@ while ejec:
         VENTANA.blit(img_central, (338, 284))
         # Mostrar imágenes en forma circular
 
-
         # Dibujar el borde de neón
         cambio_color_contador += 1
         if cambio_color_contador % 30 == 0:
@@ -252,13 +308,7 @@ while ejec:
 
         fuente_canciones = pygame.font.SysFont(None, 25)
         y_pos = 98
-        
-        
-        
-
-     
-
-   
+    
     # Sección de lista de canciones
     for i, ruta_cancion in enumerate(lista_canciones):
         # Extrae solo el nombre del archivo sin la ruta ni la extensión ni el nombre de artista 
@@ -284,25 +334,15 @@ while ejec:
                 (100 - 5, y_pos - 3, superficie_texto.get_width() + 12, superficie_texto.get_height() + 6)
             )
 
-   
-        
-        
         # Blitea el texto encima del rectángulo
         VENTANA.blit(superficie_texto, (100, y_pos))
         y_pos += 20
 
-        
-        
-        
         # Código adicional para los créditos
         texto_creditos = fuente.render(f" {creditos} $ ", True, BLANCO)
         VENTANA.blit(texto_creditos, (72, 620))
         VENTANA.blit(moneda_creditos, (10, 600))
         
-    
-
-
-
     pygame.display.flip()
     clock.tick(60)
 

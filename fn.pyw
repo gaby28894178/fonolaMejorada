@@ -1,4 +1,4 @@
-import pygame
+﻿import pygame
 import os,sys, random,time
 pygame.init()
 pygame.mixer.init()
@@ -7,7 +7,7 @@ CARPETA_IMAGENES = r"C:/musica"
 alto, ancho = [1224,680]
 VENTANA = pygame.display.set_mode((alto,ancho))
 pygame.display.set_caption("ROKOPITHON-BG-Gabrielli")
-back = pygame.image.load("8088488.jpg")
+back = pygame.image.load("background.jpg")
 background = pygame.transform.scale(back,(alto -22,ancho))
 moneda = pygame.image.load("img1.png")
 moneda_creditos= pygame.transform.scale(moneda,(50,50))
@@ -94,7 +94,7 @@ cambio_color_contador = 0
 mostrar_carrusel = True
 
 # Créditos iniciales
-creditos = 1
+creditos = 100
 
 # Lista para las canciones en cola
 cola_canciones = []

@@ -14,7 +14,7 @@ CARPETA_IMAGENES = "C:/musica"
 alto, ancho = [1224,680]
 VENTANA = pygame.display.set_mode((alto,ancho))
 pygame.display.set_caption("ROKOPITHON-BG-Gabrielli")
-back = pygame.image.load("8088488.jpg")
+back = pygame.image.load("background.jpg")
 background = pygame.transform.scale(back,(alto -22,ancho))
 
 moneda = pygame.image.load("img1.png")
@@ -164,8 +164,7 @@ while ejec:
                         cola_canciones.append(lista_canciones[indice_cancion])
                         creditos -= 1
                         # print(f"Agregada a la cola: {lista_canciones[indice_cancion]} - Créditos restantes: {creditos}")
-                    else:
-                     pass
+                  
 
     # Reproducir la siguiente canción en la cola si no hay música reproduciéndose
     if not pygame.mixer.music.get_busy() and cola_canciones:
@@ -223,19 +222,13 @@ while ejec:
         pygame.draw.rect(VENTANA, color_neon, (330, 275, 358, 358), 5, border_radius=2)
 
     else:
-       
         VENTANA.fill(NEGRO)
-        
         color = color_aleatorio()
         texto = font.render("SinFonola ", True, color)
             # Dibujar el texto en la pantalla
         VENTANA.blit(texto, (550, 10))
-
-        
-        
         img_seleccionada = pygame.transform.scale(imagen_seleccionada, (380, 300))
         VENTANA.blit(img_seleccionada, (450, 100))
-
         fuente_canciones = pygame.font.SysFont(None, 20)
         y_pos = 98
         for i, cancion in enumerate(lista_canciones):
@@ -245,7 +238,6 @@ while ejec:
             texto_creditos = fuente.render(f" {creditos} $ ", True, BLANCO)
             VENTANA.blit(texto_creditos, (72, 620))
             VENTANA.blit(moneda_creditos,(10,600))
-            
             # Renderizar el texto con un color aleatorio
             color = color_aleatorio()
             texto = font.render("Insertion Money Or Coint", True, color)
