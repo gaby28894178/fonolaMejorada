@@ -60,7 +60,7 @@ VIOLETA = (148, 0, 211)
 
 
 # Extensiones de imagen válidas
-EXTENSIONES_VALIDAS = ('.png', '.jpg', '.jpeg')
+EXTENSIONES_VALIDAS = ('front.png', 'front.jpg', 'front.jpeg')
 # Extensiones válidas de música
 EXTENSIONES_MUSICA = ('.mp3', '.wav', '.ogg')
 # Función para obtener todas las imágenes en la carpeta y subcarpetas

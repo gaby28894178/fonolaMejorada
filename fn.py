@@ -3,250 +3,571 @@ import os
 import sys
 import random
 
-# Inicializar Pygame y su mixer
+# ========== INICIALIZACIÓN ==========
 pygame.init()
 pygame.mixer.init()
+clock = pygame.time.Clock()
 
-# Ruta de la carpeta donde están las imágenes y sus subcarpetas
-CARPETA_IMAGENES = "C:/musica"
-
-# Configurar la ventana
-alto, ancho = [1224,680]
-VENTANA = pygame.display.set_mode((alto,ancho))
-pygame.display.set_caption("ROKOPITHON-BG-Gabrielli")
-back = pygame.image.load("background.jpg")
-background = pygame.transform.scale(back,(alto -22,ancho))
-
-moneda = pygame.image.load("img1.png")
-moneda_creditos= pygame.transform.scale(moneda,(50,50))
+# ========== CONSTANTES Y CONFIGURACIÓN ==========
 # Colores
 NEGRO = (0, 0, 0)
 BLANCO = (255, 255, 255)
 AMARILLO = (255, 255, 85)
-VERDE = (0, 255, 0)
-AZUL = (0, 0, 255)
+ROJO = (255, 50, 50)
+VERDE = (50, 255, 50)
+GRIS_OSCURO = (50, 50, 50)
+GRIS_CLARO = (100, 100, 100)
+AZUL_CLARO = (100, 100, 255)
 
-# Extensiones de imagen válidas
+# Configuración de ventana
+ANCHO, ALTO = 1224, 780
+VENTANA = pygame.display.set_mode((ANCHO, ALTO))
+pygame.display.set_caption("ROKOPITHON-BG-Gabrielli-Tel 11-2167-4227")
+
+# Rutas y extensiones
+CARPETA_IMAGENES = "C:/musica"
 EXTENSIONES_VALIDAS = ('.png', '.jpg', '.jpeg')
-
-# Extensiones válidas de música
 EXTENSIONES_MUSICA = ('.mp3', '.wav', '.ogg')
 
-# Función para obtener todas las imágenes en la carpeta y subcarpetas
+# Configuración de grid
+GRID_COLS = 4
+GRID_ROWS = 3
+ITEMS_PER_PAGE = GRID_COLS * GRID_ROWS
+
+# ========== CLASE DE ESTADO ==========
+class EstadoApp:
+    def __init__(self):
+        # Configuración de interfaz
+        self.imagen_seleccionada = None
+        self.lista_canciones = []
+        self.indice_cancion = 0
+        self.cancion_actual = None
+        self.indice_imagen = None
+        self.reproduciendo = False
+        self.ejecucion = True
+        self.mostrar_grid = True
+        self.mostrar_creditos = True
+        self.scroll_canciones = 0
+        self.creditos = 2
+        self.creditos_activos = True
+        
+        # Para la cola de reproducción
+        self.playlist = []
+        self.current_playlist_index = 0
+        self.en_cola = False
+        self.playlist_visible = True
+        
+        # Temporizador de inactividad
+        self.tiempo_inicio_inactividad = pygame.time.get_ticks()
+        self.tiempo_limite_inactividad = 20000  # 20 segundos en milisegundos
+        self.temporizador_activo = True
+        
+        # Información de vista
+        self.vista_actual = "Principal"
+        self.vistas_cargadas = []
+
+    def reiniciar_temporizador(self):
+        """Reinicia el temporizador de inactividad"""
+        self.tiempo_inicio_inactividad = pygame.time.get_ticks()
+    
+    def verificar_inactividad(self):
+        """Verifica si ha pasado el tiempo límite de inactividad"""
+        if not self.temporizador_activo:
+            return False
+            
+        tiempo_actual = pygame.time.get_ticks()
+        tiempo_transcurrido = tiempo_actual - self.tiempo_inicio_inactividad
+        
+        return tiempo_transcurrido >= self.tiempo_limite_inactividad
+    
+    def volver_a_principal(self):
+        """Regresa a la vista principal y resetea el estado"""
+        self.mostrar_grid = True
+        self.vista_actual = "Principal"
+        self.reiniciar_temporizador()
+        print("Regresando a la vista principal por inactividad...")
+
+# ========== FUNCIONES DE CARGA DE RECURSOS ==========
+def cargar_fondo():
+    """Carga la imagen de fondo o crea una por defecto"""
+    try:
+        back = pygame.image.load("background.jpg")
+        fondo = pygame.transform.scale(back, (ANCHO, ALTO))
+        return fondo, fondo.copy()
+    except Exception as e:
+        print(f"Error al cargar fondo: {e}")
+        fondo = pygame.Surface((ANCHO, ALTO))
+        fondo.fill(NEGRO)
+        return fondo, fondo.copy()
+
+def cargar_icono_moneda():
+    """Carga el icono de moneda para créditos"""
+    try:
+        moneda = pygame.image.load("img1.png")
+        return pygame.transform.scale(moneda, (40, 40))
+    except Exception as e:
+        print(f"Error al cargar icono: {e}")
+        return None
+
 def obtener_imagenes(carpeta):
+    """Obtiene todas las imágenes válidas de la carpeta y subcarpetas"""
     imagenes = []
-    for root, dirs, files in os.walk(carpeta):
-        for file in files:
-            if file.endswith(EXTENSIONES_VALIDAS):
-                imagenes.append(os.path.join(root, file))
+    try:
+        for root, _, files in os.walk(carpeta):
+            for file in files:
+                if file.lower().endswith(EXTENSIONES_VALIDAS):
+                    imagenes.append(os.path.join(root, file))
+    except Exception as e:
+        print(f"Error al buscar imágenes: {e}")
     return imagenes
 
-# Función para obtener canciones de la misma carpeta
 def obtener_canciones(carpeta):
+    """Obtiene las canciones de una carpeta específica"""
     canciones = []
-    for file in os.listdir(carpeta):
-        if file.endswith(EXTENSIONES_MUSICA):
-            canciones.append(file)
+    try:
+        for file in os.listdir(carpeta):
+            if file.lower().endswith(EXTENSIONES_MUSICA):
+                canciones.append(file)
+    except Exception as e:
+        print(f"No se pudo acceder a {carpeta}: {e}")
     return canciones
 
-# Cargar todas las imágenes de la carpeta y subcarpetas
-imagenes = obtener_imagenes(CARPETA_IMAGENES)
+def cargar_imagenes(imagenes):
+    """Carga las imágenes o crea placeholders si falla"""
+    imagenes_cargadas = []
+    for img_path in imagenes:
+        try:
+            img = pygame.image.load(img_path).convert()
+            imagenes_cargadas.append(img)
+        except Exception as e:
+            print(f"Error al cargar {img_path}: {e}")
+            placeholder = pygame.Surface((200, 200))
+            placeholder.fill((random.randint(0, 255), random.randint(0, 255), random.randint(0, 255)))
+            imagenes_cargadas.append(placeholder)
+    return imagenes_cargadas
 
-# Si no hay imágenes, salir del programa
-if len(imagenes) == 0:
-    print("No se encontraron imágenes en la carpeta especificada.")
+def cargar_tecla(ruta, tamaño=(40, 40)):
+    """Carga una imagen de tecla o devuelve None si falla"""
+    try:
+        img = pygame.image.load(ruta).convert_alpha()
+        return pygame.transform.scale(img, tamaño)
+    except Exception as e:
+        print(f"Error al cargar tecla {ruta}: {e}")
+        superficie = pygame.Surface(tamaño, pygame.SRCALPHA)
+        pygame.draw.rect(superficie, GRIS_CLARO, (0, 0, tamaño[0], tamaño[1]), 1)
+        return superficie
+
+# ========== FUNCIONES DE REPRODUCCIÓN DE MÚSICA ==========
+def reproducir_cancion(ruta_cancion, estado):
+    """Reproduce una canción y maneja los créditos"""
+    try:
+        pygame.mixer.music.load(ruta_cancion)
+        pygame.mixer.music.play()
+        estado.reproduciendo = True
+        estado.cancion_actual = os.path.basename(ruta_cancion)
+        # NO descontar crédito aquí, ya se descontó al seleccionar
+        # Configurar evento para cuando termine la canción
+        pygame.mixer.music.set_endevent(pygame.USEREVENT)
+    except Exception as e:
+        print(f"Error al reproducir {ruta_cancion}: {e}")
+
+def agregar_a_playlist(ruta_cancion, estado):
+    """Agrega una canción a la playlist"""
+    # Si la canción ya está en la playlist, no la agregamos de nuevo
+    if ruta_cancion in estado.playlist:
+        return
+    
+    estado.playlist.append(ruta_cancion)
+    if not estado.en_cola:
+        estado.current_playlist_index = len(estado.playlist) - 1
+        reproducir_cancion(ruta_cancion, estado)
+        estado.en_cola = True
+    else:
+        # Mostrar mensaje de que la canción fue agregada a la cola
+        print(f"Canción agregada a la cola: {os.path.basename(ruta_cancion)}")
+
+def manejar_fin_cancion(estado):
+    """Maneja el evento de fin de canción para la cola de reproducción"""
+    if estado.playlist:
+        estado.current_playlist_index += 1
+        if estado.current_playlist_index < len(estado.playlist):
+            reproducir_cancion(estado.playlist[estado.current_playlist_index], estado)
+        else:
+            estado.reproduciendo = False
+            estado.en_cola = False
+            estado.playlist = []
+            estado.current_playlist_index = 0
+
+# ========== FUNCIONES DE INTERFAZ GRÁFICA ==========
+def dibujar_tecla_con_texto(x, y, tecla_img, texto, fuente, ventana):
+    """Dibuja una tecla con su texto descriptivo"""
+    if tecla_img:
+        ventana.blit(tecla_img, (x, y))
+    txt_surf = fuente.render(texto, True, BLANCO)
+    ventana.blit(txt_surf, (x + (tecla_img.get_width() if tecla_img else 0) + 5, 
+                 y + ((tecla_img.get_height() - txt_surf.get_height()) // 2 if tecla_img else 0)))
+
+def dibujar_panel_teclas(ventana, teclas, fuente_canciones):
+    """Dibuja el panel inferior con los controles"""
+    panel_y = ALTO - 52
+    ancho_panel = ANCHO - 10
+    
+    pygame.draw.rect(ventana, GRIS_OSCURO, (6, panel_y, ancho_panel, 45), 0)
+    pygame.draw.rect(ventana, AMARILLO, (6, panel_y, ancho_panel, 45), 2)
+    
+    # Teclas de navegación
+    x_pos = 100
+    for tecla, texto in [('left', "Izquierda"), ('right', "Derecha"), 
+                         ('up', "Arriba"), ('down', "Abajo")]:
+        dibujar_tecla_con_texto(x_pos, panel_y + 5, teclas.get(tecla), texto, fuente_canciones, ventana)
+        x_pos += 150
+    
+    # Teclas de acciones
+    x_pos = ANCHO - 500
+    for tecla, texto in [('enter', "Seleccionar"), ('m', "Menú"), ('c', "Créditos"), ('q', "Mostrar Cola")]:
+        dibujar_tecla_con_texto(x_pos, panel_y + 5, teclas.get(tecla), texto, fuente_canciones, ventana)
+        x_pos += 150
+
+def dibujar_cola_reproduccion(ventana, estado, fuente_canciones):
+    """Dibuja la cola de reproducción en la parte derecha"""
+    if not estado.playlist_visible or not estado.playlist:
+        return
+    
+    ancho_cola = 300
+    margen = 20
+    
+    # Panel de la cola
+    pygame.draw.rect(ventana, GRIS_OSCURO, (ANCHO - ancho_cola - margen, 100, ancho_cola, ALTO - 200))
+    pygame.draw.rect(ventana, AZUL_CLARO, (ANCHO - ancho_cola - margen, 100, ancho_cola, ALTO - 200), 2)
+    
+    # Título
+    titulo = fuente_canciones.render("COLA DE REPRODUCCIÓN", True, AZUL_CLARO)
+    ventana.blit(titulo, (ANCHO - ancho_cola - margen + 10, 110))
+    
+    # Lista de canciones en cola
+    for i, cancion in enumerate(estado.playlist):
+        y_pos = 140 + i * 25
+        nombre = os.path.basename(cancion)[:30]
+        
+        # Resaltar la canción actual
+        if i == estado.current_playlist_index and estado.reproduciendo:
+            color = AMARILLO
+            pygame.draw.rect(ventana, GRIS_CLARO, (ANCHO - ancho_cola - margen + 5, y_pos - 2, ancho_cola - 10, 20))
+        else:
+            color = BLANCO
+        
+        texto = fuente_canciones.render(f"{i+1}. {nombre}", True, color)
+        ventana.blit(texto, (ANCHO - ancho_cola - margen + 10, y_pos))
+
+def dibujar_indicador_tiempo(ventana, estado, fuente_canciones):
+    """Dibuja un indicador del tiempo restante antes de volver al menú principal"""
+    if not estado.temporizador_activo or estado.mostrar_grid:
+        return
+    
+    tiempo_actual = pygame.time.get_ticks()
+    tiempo_transcurrido = tiempo_actual - estado.tiempo_inicio_inactividad
+    tiempo_restante = max(0, estado.tiempo_limite_inactividad - tiempo_transcurrido)
+    segundos_restantes = tiempo_restante // 1000
+    
+    # Solo mostrar cuando quedan menos de 5 segundos
+    if segundos_restantes <= 5:
+        texto = f"Regresando al menu en {segundos_restantes}s"
+        superficie_texto = fuente_canciones.render(texto, True, ROJO)
+        x = ANCHO // 2 - superficie_texto.get_width() // 2
+        y = 20
+        
+        # Fondo semi-transparente
+        pygame.draw.rect(ventana, (0, 0, 0, 128), (x - 10, y - 5, superficie_texto.get_width() + 20, superficie_texto.get_height() + 10))
+        ventana.blit(superficie_texto, (x, y))
+
+def dibujar_grid(ventana, imagenes_cargadas, current_page, selected_index, estado, 
+                fuente_principal, fuente_titulo, fuente_creditos, moneda_creditos, teclas):
+    """Dibuja el grid de imágenes"""
+    start_idx = current_page * ITEMS_PER_PAGE
+    end_idx = min(start_idx + ITEMS_PER_PAGE, len(imagenes_cargadas))
+    cover_w, cover_h = 200, 200
+    margin_x, margin_y = 50, 50
+    
+    for i in range(start_idx, end_idx):
+        pos_rel = i - start_idx
+        row, col = pos_rel // GRID_COLS, pos_rel % GRID_COLS
+        x = margin_x + col * (cover_w + 30)
+        y = margin_y + row * (cover_h + 30)
+        
+        cover = pygame.transform.scale(imagenes_cargadas[i], (cover_w, cover_h))
+        ventana.blit(cover, (x, y))
+        
+        if pos_rel == selected_index:
+            pygame.draw.rect(ventana, AMARILLO, (x-5, y-5, cover_w+10, cover_h+10), 3)
+    
+    # Información de página
+    total_pages = max(1, (len(imagenes_cargadas) + ITEMS_PER_PAGE - 1) // ITEMS_PER_PAGE)
+    texto_pagina = fuente_principal.render(f"Página {current_page+1}/{total_pages}", True, BLANCO)
+    ventana.blit(texto_pagina, (ANCHO//2 - 50, ALTO - 100))
+    
+    # Título principal
+    texto_titulo = fuente_titulo.render("Selecciona un Álbum", True, AMARILLO)
+    ventana.blit(texto_titulo, (ANCHO//2 - 100, 20))
+    
+    # Mostrar créditos
+    if estado.creditos_activos:
+        dibujar_label_creditos(ventana, estado, fuente_creditos, moneda_creditos)
+    
+    fuente_canciones = pygame.font.SysFont(None, 24)
+    dibujar_panel_teclas(ventana, teclas, fuente_canciones)
+
+def dibujar_lista_canciones(ventana, estado, imagenes, fuente_principal, fuente_titulo, 
+                          fuente_canciones, fuente_creditos, moneda_creditos, teclas):
+    """Dibuja la lista de canciones con scroll"""
+    # Panel principal
+    pygame.draw.rect(ventana, GRIS_OSCURO, (50, 50, 350, ALTO - 150), 0)
+    pygame.draw.rect(ventana, AMARILLO, (50, 50, 350, ALTO - 149), 2)
+    
+    # Título del álbum
+    if estado.indice_imagen is not None and estado.indice_imagen < len(imagenes):
+        titulo = os.path.basename(os.path.dirname(imagenes[estado.indice_imagen]))[:30]
+    else:
+        titulo = "Álbum desconocido"
+    
+    texto_titulo = fuente_titulo.render(titulo, True, AMARILLO)
+    ventana.blit(texto_titulo, (60, 60))
+    
+    # Área de canciones con scroll
+    area_canciones = pygame.Rect(60, 90, 330, ALTO - 228)
+    pygame.draw.rect(ventana, GRIS_OSCURO, area_canciones)
+    
+    # Calcular canciones visibles
+    max_visibles = area_canciones.height // 25
+    inicio = max(0, min(estado.scroll_canciones, len(estado.lista_canciones) - max_visibles))
+    fin = min(inicio + max_visibles, len(estado.lista_canciones))
+    
+    # Dibujar canciones visibles
+    for i in range(inicio, fin):
+        y_pos = 90 + (i - inicio) * 25
+        color = AMARILLO if i == estado.indice_cancion else BLANCO
+        nombre = estado.lista_canciones[i][:25] if i < len(estado.lista_canciones) else "Canción desconocida"
+        texto = fuente_canciones.render(nombre, True, color)
+        ventana.blit(texto, (70, y_pos))
+    
+    # Barra de scroll
+    if len(estado.lista_canciones) > max_visibles:
+        altura_barra = max(20, (max_visibles / len(estado.lista_canciones)) * area_canciones.height)
+        pos_barra = (estado.scroll_canciones / len(estado.lista_canciones)) * (area_canciones.height - altura_barra)
+        pygame.draw.rect(ventana, GRIS_CLARO, (area_canciones.right - 10, area_canciones.top + pos_barra, 8, altura_barra))
+    
+    # Estado de reproducción
+    estado_texto = "Reproduciendo" if estado.reproduciendo else "Pausado"
+    texto_estado = fuente_principal.render(f"Estado: {estado_texto}", True, BLANCO)
+    ventana.blit(texto_estado, (96, ALTO - 210))
+    
+    # Canción actual
+    if estado.cancion_actual:
+        texto_cancion = fuente_principal.render(f"Canción: {estado.cancion_actual[:3]}", True, BLANCO)
+        ventana.blit(texto_cancion, (96, ALTO - 180))
+    
+    # Indicador de modo
+    texto_modo = fuente_titulo.render("Modo: Lista de Canciones", True, AMARILLO)
+    ventana.blit(texto_modo, (400, 60))
+    
+    # Mostrar créditos
+    if estado.creditos_activos:
+        dibujar_label_creditos(ventana, estado, fuente_creditos, moneda_creditos)
+    
+    # Mostrar cola de reproducción
+    dibujar_cola_reproduccion(ventana, estado, fuente_canciones)
+    
+    # Mostrar indicador de tiempo
+    dibujar_indicador_tiempo(ventana, estado, fuente_canciones)
+    
+    dibujar_panel_teclas(ventana, teclas, fuente_canciones)
+
+def dibujar_label_creditos(ventana, estado, fuente_creditos, moneda_creditos):
+    """Dibuja el label de créditos que se actualiza dinámicamente"""
+    ancho_panel = 200
+    alto_panel = 60
+    margen = 20
+    
+    panel_x = ANCHO - ancho_panel - margen
+    panel_y = margen
+    
+    pygame.draw.rect(ventana, GRIS_OSCURO, (panel_x, panel_y, ancho_panel, alto_panel))
+    pygame.draw.rect(ventana, AMARILLO, (panel_x, panel_y, ancho_panel, alto_panel), 2)
+    
+    if moneda_creditos:
+        ventana.blit(moneda_creditos, (panel_x + 10, panel_y + 10))
+    
+    texto_creditos = fuente_creditos.render(f"Créditos: {estado.creditos}", True, AMARILLO)
+    ventana.blit(texto_creditos, (panel_x + 60, panel_y + 20))
+
+# ========== FUNCIÓN PRINCIPAL ==========
+def main():
+    # Cargar recursos
+    background, default_background = cargar_fondo()
+    moneda_creditos = cargar_icono_moneda()
+    
+    # Fuentes
+    fuente_principal = pygame.font.Font(None, 35)
+    fuente_canciones = pygame.font.SysFont(None, 24)
+    fuente_titulo = pygame.font.SysFont(None, 30, bold=True)
+    fuente_creditos = pygame.font.SysFont(None, 24)
+    
+    # Cargar imágenes
+    imagenes = obtener_imagenes(CARPETA_IMAGENES)
+    if not imagenes:
+        print("No se encontraron imágenes. Saliendo...")
+        pygame.quit()
+        sys.exit()
+    
+    imagenes_cargadas = cargar_imagenes(imagenes)
+    
+    # Cargar teclas
+    teclas = {
+        'up': cargar_tecla("teclas/up_arrow.png"),
+        'down': cargar_tecla("teclas/down_arrow.png"),
+        'left': cargar_tecla("teclas/left_arrow.png"),
+        'right': cargar_tecla("teclas/right_arrow.png"),
+        'enter': cargar_tecla("teclas/enter_key.png"),
+        'm': cargar_tecla("teclas/key_m.png"),
+        'pageup': cargar_tecla("teclas/pageup_key.png"),
+        'pagedown': cargar_tecla("teclas/pagedown_key.png"),
+        'c': cargar_tecla("teclas/enter.png"),
+        'q': cargar_tecla("teclas/key_q.png")
+    }
+    
+    # Estado de la aplicación
+    estado = EstadoApp()
+    current_page = 0
+    selected_index = 0
+    
+    # Bucle principal
+    while estado.ejecucion:
+        # Verificar inactividad
+        if estado.verificar_inactividad() and not estado.mostrar_grid:
+            estado.volver_a_principal()
+            current_page = 0
+            selected_index = 0
+        
+        for event in pygame.event.get():
+            if event.type == pygame.QUIT:
+                estado.ejecucion = False
+            
+            # Manejar fin de canción
+            elif event.type == pygame.USEREVENT:
+                manejar_fin_cancion(estado)
+            
+            # Manejo de teclado
+            elif event.type == pygame.KEYDOWN:
+                # Reiniciar temporizador cuando hay actividad
+                estado.reiniciar_temporizador()
+                
+                if event.key == pygame.K_ESCAPE:
+                    estado.ejecucion = False
+                
+                if estado.mostrar_grid:
+                    # Navegación en el grid
+                    if event.key == pygame.K_LEFT:
+                        selected_index = max(0, selected_index - 1)
+                    elif event.key == pygame.K_RIGHT:
+                        selected_index = min(ITEMS_PER_PAGE - 1, selected_index + 1)
+                    elif event.key == pygame.K_UP:
+                        selected_index = max(0, selected_index - GRID_COLS)
+                    elif event.key == pygame.K_DOWN:
+                        selected_index = min(ITEMS_PER_PAGE - 1, selected_index + GRID_COLS)
+                    elif event.key == pygame.K_RETURN:
+                        # Seleccionar imagen/carpeta
+                        if current_page * ITEMS_PER_PAGE + selected_index < len(imagenes):
+                            estado.indice_imagen = current_page * ITEMS_PER_PAGE + selected_index
+                            carpeta = os.path.dirname(imagenes[estado.indice_imagen])
+                            estado.lista_canciones = obtener_canciones(carpeta)
+                            if estado.lista_canciones:
+                                estado.mostrar_grid = False
+                                estado.vista_actual = "Lista_Canciones"
+                                estado.reiniciar_temporizador()  # Reiniciar al cambiar vista
+                    elif event.key == pygame.K_PAGEUP:
+                        current_page = max(0, current_page - 1)
+                        selected_index = 0
+                    elif event.key == pygame.K_PAGEDOWN:
+                        current_page = min((len(imagenes_cargadas) + ITEMS_PER_PAGE - 1) // ITEMS_PER_PAGE - 1, current_page + 1)
+                        selected_index = 0
+                
+                else:  # Modo lista de canciones
+                    if event.key == pygame.K_UP:
+                        estado.indice_cancion = max(0, estado.indice_cancion - 1)
+                        if estado.indice_cancion < estado.scroll_canciones:
+                            estado.scroll_canciones = estado.indice_cancion
+                    elif event.key == pygame.K_DOWN:
+                        estado.indice_cancion = min(len(estado.lista_canciones) - 1, estado.indice_cancion + 1)
+                        max_visibles = (ALTO - 220 - 90) // 25
+                        if estado.indice_cancion >= estado.scroll_canciones + max_visibles:
+                            estado.scroll_canciones = estado.indice_cancion - max_visibles + 1
+                    elif event.key == pygame.K_s:
+                        pygame.mixer.music.stop()
+                        estado.reproduciendo = False
+                        estado.en_cola = False
+                        estado.playlist = []
+                        estado.current_playlist_index = 0
+                        print("Música detenida y cola limpiada.")
+                    elif event.key == pygame.K_RETURN:
+                        if estado.creditos > 0:
+                            if estado.indice_cancion < len(estado.lista_canciones):
+                                ruta_cancion = os.path.join(
+                                    os.path.dirname(imagenes[estado.indice_imagen]), 
+                                    estado.lista_canciones[estado.indice_cancion])
+                                # Descontar crédito ANTES de agregar a playlist
+                                estado.creditos = max(0, estado.creditos - 1)
+                                agregar_a_playlist(ruta_cancion, estado)
+                                print(f"Crédito descontado. Créditos restantes: {estado.creditos}")
+                        else:
+                            print("No tienes créditos suficientes para reproducir la canción.")
+                    elif event.key == pygame.K_SPACE:
+                        # Pausar/reanudar
+                        if estado.reproduciendo:
+                            pygame.mixer.music.pause()
+                            estado.reproduciendo = False
+                        else:
+                            pygame.mixer.music.unpause()
+                            estado.reproduciendo = True
+                    elif event.key == pygame.K_n:
+                        # Siguiente canción
+                        if estado.playlist and estado.current_playlist_index < len(estado.playlist) - 1:
+                            estado.current_playlist_index += 1
+                            reproducir_cancion(estado.playlist[estado.current_playlist_index], estado)
+                    elif event.key == pygame.K_b:
+                        # Canción anterior
+                        if estado.playlist and estado.current_playlist_index > 0:
+                            estado.current_playlist_index -= 1
+                            reproducir_cancion(estado.playlist[estado.current_playlist_index], estado)
+                
+                # Teclas globales
+                if event.key == pygame.K_m:
+                    estado.mostrar_grid = True
+                    estado.vista_actual = "Principal"
+                    estado.reiniciar_temporizador()
+                elif event.key == pygame.K_c:
+                    estado.creditos += 1
+                    estado.mostrar_creditos = not estado.mostrar_creditos
+                elif event.key == pygame.K_q:
+                    estado.playlist_visible = not estado.playlist_visible
+            
+            # Reiniciar temporizador también con eventos de mouse
+            elif event.type in [pygame.MOUSEBUTTONDOWN, pygame.MOUSEMOTION]:
+                estado.reiniciar_temporizador()
+        
+        # Dibujar la escena
+        VENTANA.blit(background, (0, 0))
+        
+        if estado.mostrar_grid:
+            dibujar_grid(VENTANA, imagenes_cargadas, current_page, selected_index, estado,
+                        fuente_principal, fuente_titulo, fuente_creditos, moneda_creditos, teclas)
+        else:
+            dibujar_lista_canciones(VENTANA, estado, imagenes, fuente_principal, fuente_titulo,
+                                  fuente_canciones, fuente_creditos, moneda_creditos, teclas)
+        
+        pygame.display.flip()
+        clock.tick(60)
+
     pygame.quit()
     sys.exit()
 
-# Cargar las imágenes en Pygame
-imagenes_cargadas = [pygame.image.load(img).convert() for img in imagenes]
-
-# Index para controlar qué imagen se muestra en el centro
-indice_imagen = 0
-
-# Variable para almacenar la imagen seleccionada con "Enter"
-imagen_seleccionada = None
-lista_canciones = []
-
-# Variable para controlar la selección de canciones
-indice_cancion = 0
-
-# Bucle principal
-ejec = True
-clock = pygame.time.Clock()
-
-# Función para obtener cuatro imágenes de forma circular
-def obtener_imagen_circular(indice):
-    return [
-        imagenes_cargadas[indice % len(imagenes_cargadas)],  # Imagen central
-        imagenes_cargadas[(indice - 1) % len(imagenes_cargadas)],  # Imagen más derecha
-        imagenes_cargadas[(indice - 2) % len(imagenes_cargadas)], 
-        imagenes_cargadas[(indice - 3) % len(imagenes_cargadas)], # Imagen izquierda
-        imagenes_cargadas[(indice + 1) % len(imagenes_cargadas)],  # Imagen derecha
-        imagenes_cargadas[(indice + 2) % len(imagenes_cargadas)],   # Imagen más derecha
-        imagenes_cargadas[(indice + 3) % len(imagenes_cargadas)]   # Imagen más derecha
-    ]
-
-# Función para generar un color aleatorio
-def color_random():
-    return (random.randint(0, 255), random.randint(0, 255), random.randint(0, 255))
-
-# Color de borde inicial para el neón
-color_neon = color_random()
-
-# Contador para ralentizar el cambio de color
-cambio_color_contador = 0
-
-# Variable para controlar si el carrusel está activo o no
-mostrar_carrusel = True
-
-# Créditos iniciales
-creditos = 1
-
-# Lista para las canciones en cola
-cola_canciones = []
-
-# Fuente para texto cont credito 
-fuente = pygame.font.Font(None, 35)
-
-# Actualizar créditos
-def actualizar_creditos(cantidad):
-    global creditos
-    creditos += cantidad
-    print(f"Créditos: {creditos}")
-#cambiar color moneda insertion 
-
-
-# Definir la fuente
-font = pygame.font.Font(None, 44)
-
-# Función para generar un color RGB aleatorio
-def color_aleatorio():
-    return (random.randint(0, 255), random.randint(0, 255), random.randint(0, 255))
-
-
-
-
-while ejec:
-    # Renderizar texto de créditos
-    texto_creditos = fuente.render(f"Créditos: {creditos}", True, BLANCO)
-    # VENTANA.blit(texto_creditos, (750, 20))
-    # VENTANA.blit(moneda_creditos,(750,20))
-    
-    
-    for event in pygame.event.get():
-        if event.type == pygame.QUIT:
-            ejec = False
-        elif event.type == pygame.KEYDOWN:
-            if event.key == pygame.K_RIGHT and mostrar_carrusel:
-                indice_imagen = (indice_imagen + 1) % len(imagenes_cargadas)
-            elif event.key == pygame.K_LEFT and mostrar_carrusel:
-                indice_imagen = (indice_imagen - 1) % len(imagenes_cargadas)
-            elif event.key == pygame.K_RETURN and mostrar_carrusel:
-                imagen_seleccionada = imagenes_cargadas[indice_imagen]
-                carpeta_seleccionada = os.path.dirname(imagenes[indice_imagen])
-                lista_canciones = obtener_canciones(carpeta_seleccionada)
-                mostrar_carrusel = False
-            elif event.key == pygame.K_m and not mostrar_carrusel:
-                mostrar_carrusel = True
-                lista_canciones = []
-                indice_cancion = 0                
-            elif event.key == pygame.K_c:  # Creditos
-                actualizar_creditos(1)
-                # print(f"Créditos: {creditos}")
-            elif not mostrar_carrusel and lista_canciones:
-                if event.key == pygame.K_DOWN:
-                    indice_cancion = (indice_cancion + 1) % len(lista_canciones)
-                elif event.key == pygame.K_UP:
-                    indice_cancion = (indice_cancion - 1) % len(lista_canciones)
-                elif event.key == pygame.K_RETURN:
-                    if creditos > 0:
-                        cola_canciones.append(lista_canciones[indice_cancion])
-                        creditos -= 1
-                        # print(f"Agregada a la cola: {lista_canciones[indice_cancion]} - Créditos restantes: {creditos}")
-                  
-
-    # Reproducir la siguiente canción en la cola si no hay música reproduciéndose
-    if not pygame.mixer.music.get_busy() and cola_canciones:
-        siguiente_cancion = cola_canciones.pop(0)
-        ruta_cancion = os.path.join(carpeta_seleccionada, siguiente_cancion)
-        pygame.mixer.music.load(ruta_cancion)
-        pygame.mixer.music.play()
-        # print(f"Reproduciendo: {siguiente_cancion}")
-
-    # Dibujar la ventana
-    VENTANA.fill(NEGRO)
-    VENTANA.blit(background,(10,-390))
-
-    if mostrar_carrusel:
-          
-        color = color_aleatorio()
-        texto = font.render("SinFonola ", True, color)
-            # Dibujar el texto en la pantalla
-        VENTANA.blit(texto, (550, 10))
-        
-        texto_creditos = fuente.render(f"{creditos}  $ ", True, BLANCO)
-        VENTANA.blit(texto_creditos, (72, 620))
-        VENTANA.blit(moneda_creditos,(10,600))
-
-        # Obtener imágenes
-        img_central,m1,m2,m3,p1,p2,p3 = obtener_imagen_circular(indice_imagen)
-
-        # Redimensionar imágenes
-        img_central = pygame.transform.scale(img_central, (340, 340))
-
-        m1 = pygame.transform.scale(m1, (260, 260))
-        m2 = pygame.transform.scale(m2, (260, 260))
-        m3 = pygame.transform.scale(m3, (260, 260))
-        
-        p1 = pygame.transform.scale(p1, (290, 290))
-        p2 = pygame.transform.scale(p2, (260, 260))
-        p3 = pygame.transform.scale(p3, (260, 260))
-        
-        
-          # Mostrar imágenes
-        VENTANA.blit(m1, (110, 10))
-        VENTANA.blit(m2, (660, 160))
-        VENTANA.blit(m1, (580, 262))
-        VENTANA.blit(p3, (230, 160))
-        VENTANA.blit(p2, (140, 225))
-        VENTANA.blit(p1, (218, 262))
-        VENTANA.blit(img_central, (338, 284))
-        # Mostrar imágenes en forma circular
-
-
-        # Dibujar el borde de neón
-        cambio_color_contador += 1
-        if cambio_color_contador % 30 == 0:
-            color_neon = color_random()
-        pygame.draw.rect(VENTANA, color_neon, (330, 275, 358, 358), 5, border_radius=2)
-
-    else:
-        VENTANA.fill(NEGRO)
-        color = color_aleatorio()
-        texto = font.render("SinFonola ", True, color)
-            # Dibujar el texto en la pantalla
-        VENTANA.blit(texto, (550, 10))
-        img_seleccionada = pygame.transform.scale(imagen_seleccionada, (380, 300))
-        VENTANA.blit(img_seleccionada, (450, 100))
-        fuente_canciones = pygame.font.SysFont(None, 20)
-        y_pos = 98
-        for i, cancion in enumerate(lista_canciones):
-            texto = fuente_canciones.render(f"> {cancion}" if i == indice_cancion else cancion, True, AMARILLO if i == indice_cancion else BLANCO)
-            VENTANA.blit(texto, (123, y_pos))
-            y_pos += 25
-            texto_creditos = fuente.render(f" {creditos} $ ", True, BLANCO)
-            VENTANA.blit(texto_creditos, (72, 620))
-            VENTANA.blit(moneda_creditos,(10,600))
-            # Renderizar el texto con un color aleatorio
-            color = color_aleatorio()
-            texto = font.render("Insertion Money Or Coint", True, color)
-            # Dibujar el texto en la pantalla
-            VENTANA.blit(texto, (125 , 618))
-
-
-
-    pygame.display.flip()
-    clock.tick(60)
-
-pygame.quit()
+if __name__ == "__main__":
+    main()
